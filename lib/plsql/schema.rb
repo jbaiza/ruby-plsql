@@ -190,7 +190,7 @@ module PLSQL
       end
     end
 
-    def find_database_object(name, override_schema_name = nil)
+    def find_database_object(name, override_schema_name = nil, revalidated = nil)
       object_schema_name = override_schema_name || schema_name
       object_name = name.to_s.upcase
       if row = select_first(
@@ -204,10 +204,28 @@ module PLSQL
           AND object_type IN ('PROCEDURE','FUNCTION','PACKAGE','TABLE','VIEW','SEQUENCE','TYPE','SYNONYM')",
           object_schema_name, object_name)
         object_type, object_id, status, body_status = row
-        raise ArgumentError, "Database object '#{object_schema_name}.#{object_name}' is not in valid status\n#{
-          _errors(object_schema_name, object_name, object_type)}" if status == 'INVALID'
-        raise ArgumentError, "Package '#{object_schema_name}.#{object_name}' body is not in valid status\n#{
-          _errors(object_schema_name, object_name, 'PACKAGE BODY')}" if body_status == 'INVALID'
+        if body_status == 'INVALID' and revalidated == nil
+          @connection.exec("DECLARE
+            PRAGMA AUTONOMOUS_TRANSACTION;
+          BEGIN
+            EXECUTE IMMEDIATE 'ALTER PACKAGE #{object_schema_name}.#{object_name} COMPILE';
+          END;")
+          find_database_object(name, override_schema_name, true)
+        else
+          raise ArgumentError, "Database object '#{object_schema_name}.#{object_name}' is not in valid status\n#{
+            _errors(object_schema_name, object_name, object_type)}" if status == 'INVALID'
+        end
+        if body_status == 'INVALID' and revalidated == nil
+          @connection.exec("DECLARE
+            PRAGMA AUTONOMOUS_TRANSACTION;
+          BEGIN
+            EXECUTE IMMEDIATE 'ALTER PACKAGE #{object_schema_name}.#{object_name} COMPILE BODY';
+          END;")
+          find_database_object(name, override_schema_name, true)
+        else
+          raise ArgumentError, "Package '#{object_schema_name}.#{object_name}' body is not in valid status\n#{
+            _errors(object_schema_name, object_name, 'PACKAGE BODY')}" if body_status == 'INVALID'
+        end
         case object_type
         when 'PROCEDURE', 'FUNCTION'
           if (connection.database_version <=> [11, 1, 0, 0]) >= 0
