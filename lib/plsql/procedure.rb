@@ -222,7 +222,7 @@ module PLSQL
           else
             sql << "element #{ProcedureCommon.type_to_sql(element_metadata)}"
           end
-          sql << ",\ni__ NUMBER(38)\n"
+          sql << ",\ni__ VARCHAR2(4000)\n"
         sql << ") ON COMMIT PRESERVE ROWS\n"
         sql_block = "DECLARE\nPRAGMA AUTONOMOUS_TRANSACTION;\nBEGIN\nEXECUTE IMMEDIATE :sql;\nEND;\n"
         @schema.execute sql_block, sql

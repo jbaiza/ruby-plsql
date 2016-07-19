@@ -1441,10 +1441,11 @@ describe "Parameter type mapping /" do
       SQL
       # test with negative PL/SQL table indexes
       @numbers = Hash[*(1..4).map{|i|[-i,i]}.flatten]
+      @numbers_str = Hash[*(1..4).map{|i|[(-i).to_s,i]}.flatten]
       @numbers2 = Hash[*(5..7).map{|i|[-i,i]}.flatten]
       # test with reversed PL/SQL table indexes
       @employees = Hash[*(1..10).map do |i|
-          [11-i, {
+          [(11-i).to_s, {
               :employee_id => i,
               :first_name => "First #{i}",
               :last_name => "Last #{i}",
@@ -1474,16 +1475,21 @@ describe "Parameter type mapping /" do
     end
 
     it "should return index-by table of numbers type (defined inside package)" do
-      expect(plsql.test_collections.test_numbers(@numbers)).to eq([@numbers, {:x_numbers => @numbers}])
+      expect(plsql.test_collections.test_numbers(@numbers)).to eq([@numbers_str, {:x_numbers => @numbers_str}])
+    end
+
+    it "should return index-by table of numbers type (defined inside package) even if indexed by strings" do
+      expect(plsql.test_collections.test_numbers(@numbers_str)).to eq([@numbers_str, {:x_numbers => @numbers_str}])
     end
 
     it "should clear temporary tables when autocommit with index-by table of numbers type (defined inside package) parameter" do
       old_autocommit = plsql.connection.autocommit?
       plsql.connection.autocommit = true
       numbers_hash = Hash[*(1..400).map{|i|[i,i]}.flatten]
-      expect(plsql.test_collections.test_numbers(numbers_hash)).to eq([numbers_hash, {:x_numbers => numbers_hash}])
+      numbers_hash_str = Hash[*(1..400).map{|i|[i.to_s,i]}.flatten]
+      expect(plsql.test_collections.test_numbers(numbers_hash)).to eq([numbers_hash_str, {:x_numbers => numbers_hash_str}])
       # after first call temporary tables should be cleared
-      expect(plsql.test_collections.test_numbers(numbers_hash)).to eq([numbers_hash, {:x_numbers => numbers_hash}])
+      expect(plsql.test_collections.test_numbers(numbers_hash)).to eq([numbers_hash_str, {:x_numbers => numbers_hash_str}])
       plsql.connection.autocommit = old_autocommit
     end
 
@@ -1498,9 +1504,9 @@ describe "Parameter type mapping /" do
     it "should create temporary tables in autonomous transaction" do
       old_autocommit = plsql.connection.autocommit?
       plsql.connection.autocommit = false
-      plsql.test_employees.insert @employees[1]
+      plsql.test_employees.insert @employees["1"]
       # procedure call should not commit initial insert
-      plsql.test_collections.insert_employees(2=>@employees[2], 3=>@employees[3])
+      plsql.test_collections.insert_employees(2=>@employees["2"], 3=>@employees["3"])
       plsql.rollback
       expect(plsql.test_employees.all).to be_empty
       plsql.connection.autocommit = old_autocommit
@@ -1518,7 +1524,7 @@ describe "Parameter type mapping /" do
       end
 
       it "should create temporary tables when using Oracle 9.2" do
-        expect(plsql(:oracle_9).test_collections.test_numbers(@numbers)).to eq([@numbers, {:x_numbers => @numbers}])
+        expect(plsql(:oracle_9).test_collections.test_numbers(@numbers)).to eq([@numbers_str, {:x_numbers => @numbers_str}])
       end
 
     end

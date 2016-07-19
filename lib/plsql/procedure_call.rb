@@ -300,17 +300,17 @@ module PLSQL
       when 'PL/SQL RECORD'
         values_with_index = []
         if is_index_by_table
-          values.each{|i,v| values_with_index << v.merge(:i__ => i)}
+          values.each{|i,v| values_with_index << v.merge(:i__ => i.to_s)}
         else
-          values.each_with_index{|v,i| values_with_index << v.merge(:i__ => i+1)}
+          values.each_with_index{|v,i| values_with_index << v.merge(:i__ => (i+1).to_s) }
         end
         tmp_table.insert values_with_index
       else
         values_with_index = []
         if is_index_by_table
-          values.each{|i,v| values_with_index << [v, i]}
+          values.each{|i,v| values_with_index << [v, i.to_s]}
         else
-          values.each_with_index{|v,i| values_with_index << [v, i+1]}
+          values.each_with_index{|v,i| values_with_index << [v, (i+1).to_s]}
         end
         tmp_table.insert_values [:element, :i__], *values_with_index
       end
@@ -455,7 +455,7 @@ module PLSQL
     # declare once temp variable i__ that is used as itertor
     def declare_i__
       unless @declared_i__
-        @declare_sql << "i__ PLS_INTEGER;\n"
+        @declare_sql << "i__ VARCHAR2(4000);\n"
         @declared_i__ = true
       end
     end
@@ -595,7 +595,9 @@ module PLSQL
                             :in_out => 'OUT')
           cursor.bind_param(':dbms_output_numlines', Schema::DBMS_OUTPUT_MAX_LINES, :data_type => 'NUMBER', :in_out => 'IN/OUT')
           cursor.exec
-          lines = cursor[':dbms_output_lines']
+          if cursor[':dbms_output_lines']
+            lines = cursor[':dbms_output_lines']
+          end
           cursor.close
         else
           cursor = @schema.connection.parse("BEGIN sys.dbms_output.get_line(:line, :status); END;")

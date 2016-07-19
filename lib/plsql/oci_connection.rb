@@ -177,8 +177,10 @@ module PLSQL
     def ruby_value_to_ora_value(value, type=nil)
       type ||= value.class
       case type.to_s.to_sym
-      when :Fixnum, :BigDecimal, :String
+      when :Fixnum, :BigDecimal
         value
+      when :String, :TrueClass, :FalseClass
+        value.to_s
       when :OraNumber
         # pass parameters as OraNumber to avoid rounding errors
         case value
@@ -239,6 +241,8 @@ module PLSQL
                 # nested object type or collection
                 attr_type, attr_length = plsql_to_ruby_data_type(:data_type => 'OBJECT', :sql_type_name => attr.typeinfo.typename)
                 object_attrs[key] = ruby_value_to_ora_value(object_attrs[key], attr_type)
+              else
+                object_attrs[key] = ruby_value_to_ora_value(object_attrs[key])
               end
             end
             type.new(raw_oci_connection, object_attrs)
