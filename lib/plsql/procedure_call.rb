@@ -60,7 +60,9 @@ module PLSQL
         end
         # pick first matching overload with smallest missing arguments count
         # (hoping that missing arguments will be defaulted - cannot find default value from all_arguments)
-        overload = matching_overloads.sort_by{|ov, score| score}[0][0]
+        if !matching_overloads.empty?
+          overload = matching_overloads.sort_by{|ov, score| score}[0][0]
+        end
       # otherwise try matching by sequential arguments count and types
       else
         number_of_args = args.size
