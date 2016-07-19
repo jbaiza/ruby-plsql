@@ -258,7 +258,7 @@ module PLSQL
       case value
       when Float, OraNumber, BigDecimal
         ora_number_to_ruby_number(value)
-      when DateTime, OraDate
+      when Time, DateTime, OraDate
         ora_date_to_ruby_date(value)
       when OCI8::LOB
         if value.available?
@@ -320,7 +320,7 @@ module PLSQL
     
     def ora_date_to_ruby_date(val)
       case val
-      when DateTime
+      when Time, DateTime
         # similar implementation as in oracle_enhanced adapter
         begin
           Time.send(plsql.default_timezone, val.year, val.month, val.day, val.hour, val.min, val.sec)
